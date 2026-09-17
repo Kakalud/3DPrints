@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Design Studio Hub</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { 
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            background: #121214; 
+            color: #e4e4e7; 
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header { 
+            background: #18181b; 
+            padding: 20px 32px; 
+            border-bottom: 1px solid #27272a; 
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        header h1 { 
+            font-size: 1.3rem; 
+            color: #2dd4bf; 
+            font-weight: 700; 
+            display: flex; 
+            align-items: center; 
+            gap: 10px; 
+        }
+
+        main {
+            flex: 1;
+            max-width: 1000px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 40px 24px;
+        }
+
+        .hero {
+            margin-bottom: 36px;
+        }
+        .hero h2 {
+            font-size: 1.8rem;
+            margin-bottom: 8px;
+            color: #f4f4f5;
+        }
+        .hero p {
+            color: #a1a1aa;
+            font-size: 1rem;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+        }
+
+        .card {
+            background: #18181b;
+            border: 1px solid #27272a;
+            border-radius: 14px;
+            padding: 24px;
+            transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            text-decoration: none;
+            color: inherit;
+        }
+        .card:hover {
+            transform: translateY(-4px);
+            border-color: #2dd4bf;
+            box-shadow: 0 12px 24px rgba(45, 212, 191, 0.1);
+        }
+
+        .card-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 10px;
+            background: rgba(45, 212, 191, 0.1);
+            color: #2dd4bf;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 16px;
+        }
+
+        .card h3 {
+            font-size: 1.2rem;
+            margin-bottom: 8px;
+            color: #f4f4f5;
+        }
+
+        .card p {
+            font-size: 0.9rem;
+            color: #a1a1aa;
+            line-height: 1.5;
+            margin-bottom: 20px;
+        }
+
+        .card-link {
+            font-weight: 600;
+            color: #2dd4bf;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.95rem;
+        }
+
+        footer {
+            border-top: 1px solid #27272a;
+            padding: 20px;
+            text-align: center;
+            font-size: 0.85rem;
+            color: #71717a;
+            background: #18181b;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+            3D Studio App
+        </h1>
+    </header>
+
+    <main>
+        <div class="hero">
+            <h2>Narzędzia 3D & Przeglądarka STL</h2>
+            <p>Generuj sparametryzowane modele 3D oraz podglądaj pliki STL bezpośrednio w przeglądarce.</p>
+        </div>
+
+        <div class="grid">
+            <!-- Card 1: Kreator Rury 3D -->
+            <a href="rura3D_v1.0.html" class="card">
+                <div>
+                    <div class="card-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                    </div>
+                    <h3>Kreator Rury 3D</h3>
+                    <p>Interaktywne narzędzie do projektowania cylindrów i rur z regulacją promieni, grubości ścianek i fazowaniem krawędzi.</p>
+                </div>
+                <div class="card-link">
+                    Otwórz generator &rarr;
+                </div>
+            </a>
+
+            <!-- Card 2: Visualizer STL -->
+            <a href="viewer3d.html" class="card">
+                <div>
+                    <div class="card-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                    </div>
+                    <h3>Przeglądarka STL 3D</h3>
+                    <p>Wczytuj, przeglądaj i twórz listę modeli STL z pełnym obracaniem 3D i inspekcją siatki.</p>
+                </div>
+                <div class="card-link">
+                    Otwórz przeglądarkę &rarr;
+                </div>
+            </a>
+        </div>
+    </main>
+
+    <footer>
+        &copy; 3D Studio App &bull; Wygenerowane projekty gotowe do druku 3D
+    </footer>
+
+</body>
+</html>

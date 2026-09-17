@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Przeglądarka STL 3D</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { 
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            background: #121214; 
+            color: #e4e4e7; 
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        header { 
+            background: #18181b; 
+            padding: 12px 24px; 
+            border-bottom: 1px solid #27272a; 
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 10;
+        }
+        header h1 { 
+            font-size: 1.1rem; 
+            color: #2dd4bf; 
+            font-weight: 700; 
+            display: flex; 
+            align-items: center; 
+            gap: 10px; 
+        }
+        header a {
+            color: #a1a1aa;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: color 0.2s;
+        }
+        header a:hover { color: #2dd4bf; }
+
+        .app-container {
+            display: flex;
+            flex: 1;
+            height: calc(100vh - 49px);
+        }
+
+        /* Sidebar for uploaded STL list */
+        .sidebar {
+            width: 320px;
+            min-width: 320px;
+            background: #18181b;
+            border-right: 1px solid #27272a;
+            display: flex;
+            flex-direction: column;
+            padding: 16px;
+        }
+
+        .drop-zone {
+            border: 2px dashed #2dd4bf;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            background: rgba(45, 212, 191, 0.05);
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-bottom: 16px;
+        }
+        .drop-zone:hover {
+            background: rgba(45, 212, 191, 0.12);
+        }
+        .drop-zone p {
+            font-size: 0.85rem;
+            color: #a1a1aa;
+            margin-top: 6px;
+        }
+
+        #file-input { display: none; }
+
+        .list-header {
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #71717a;
+            margin-bottom: 10px;
+        }
+
+        .stl-list {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .stl-item {
+            background: #27272a;
+            border: 1px solid #3f3f46;
+            padding: 10px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.88rem;
+            transition: border-color 0.2s, background 0.2s;
+        }
+        .stl-item:hover { border-color: #2dd4bf; }
+        .stl-item.active {
+            border-color: #2dd4bf;
+            background: rgba(45, 212, 191, 0.15);
+            font-weight: 600;
+        }
+
+        .stl-name {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 200px;
+        }
+
+        .btn-del {
+            background: none;
+            border: none;
+            color: #ef4444;
+            cursor: pointer;
+            padding: 2px 6px;
+            font-weight: bold;
+        }
+
+        /* 3D Viewport */
+        .viewport {
+            flex: 1;
+            position: relative;
+            background: #09090b;
+        }
+        #canvas-3d {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .info-overlay {
+            position: absolute;
+            bottom: 16px;
+            right: 16px;
+            background: rgba(24, 24, 27, 0.85);
+            backdrop-filter: blur(6px);
+            padding: 8px 14px;
+            border-radius: 8px;
+            border: 1px solid #27272a;
+            font-size: 0.8rem;
+            color: #a1a1aa;
+        }
+    </style>
+    <!-- Three.js + STLLoader + OrbitControls -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/STLLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+
+    <header>
+        <h1>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+            Przeglądarka STL 3D
+        </h1>
+        <a href="index.html">&larr; Powrót do menu głównego</a>
+    </header>
+
+    <div class="app-container">
+        <div class="sidebar">
+            <div class="drop-zone" id="drop-zone">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#2dd4bf" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                <p><strong>Kliknij lub przeciągnij plik STL</strong></p>
+                <input type="file" id="file-input" accept=".stl" multiple>
+            </div>
+
+            <div class="list-header">Lista Załadowanych Plików</div>
+            <div class="stl-list" id="stl-list">
+                <!-- Items appended dynamically -->
+            </div>
+        </div>
+
+        <div class="viewport">
+            <canvas id="canvas-3d"></canvas>
+            <div class="info-overlay" id="info-overlay">Sterowanie: Lewy przycisk myszy = obrót | Prawy = przesunięcie | Rolka = powiększenie</div>
+        </div>
+    </div>
+
+<script>
+    var scene, camera, renderer, controls, currentMesh;
+    var stlFiles = [];
+    var activeIdx = -1;
+
+    function init3D() {
+        var container = document.querySelector('.viewport');
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x09090b);
+
+        camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+        camera.position.set(100, 100, 100);
+
+        renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('canvas-3d'), antialias: true });
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.shadowMap.enabled = true;
+
+        controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+
+        // Grid & Lights
+        var grid = new THREE.GridHelper(200, 40, 0x3f3f46, 0x27272a);
+        grid.position.y = -0.1;
+        scene.add(grid);
+
+        var ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+
+        var dirLight1 = new THREE.DirectionalLight(0x2dd4bf, 0.8);
+        dirLight1.position.set(1, 1, 1).normalize();
+        scene.add(dirLight1);
+
+        var dirLight2 = new THREE.DirectionalLight(0xffffff, 0.5);
+        dirLight2.position.set(-1, -1, -1).normalize();
+        scene.add(dirLight2);
+
+        window.addEventListener('resize', onWindowResize);
+        animate();
+    }
+
+    function animate() {
+        requestAnimationFrame(animate);
+        controls.update();
+        renderer.render(scene, camera);
+    }
+
+    function onWindowResize() {
+        var container = document.querySelector('.viewport');
+        camera.aspect = container.clientWidth / container.clientHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(container.clientWidth, container.clientHeight);
+    }
+
+    function loadSTL(buffer, name) {
+        var loader = new THREE.STLLoader();
+        var geometry = loader.parse(buffer);
+
+        geometry.computeVertexNormals();
+        geometry.center();
+
+        var material = new THREE.MeshStandardMaterial({
+            color: 0x2dd4bf,
+            roughness: 0.3,
+            metalness: 0.2
+        });
+
+        if (currentMesh) scene.remove(currentMesh);
+
+        currentMesh = new THREE.Mesh(geometry, material);
+        
+        // Fit camera to object bounding box
+        geometry.computeBoundingBox();
+        var box = geometry.boundingBox;
+        var maxDim = Math.max(box.max.x - box.min.x, box.max.y - box.min.y, box.max.z - box.min.z);
+        camera.position.set(maxDim * 1.5, maxDim * 1.5, maxDim * 1.5);
+        camera.lookAt(0, 0, 0);
+        controls.target.set(0, 0, 0);
+
+        scene.add(currentMesh);
+    }
+
+    // UI & File handlers
+    var dropZone = document.getElementById('drop-zone');
+    var fileInput = document.getElementById('file-input');
+
+    dropZone.onclick = function() { fileInput.click(); };
+
+    fileInput.onchange = function(e) {
+        handleFiles(e.target.files);
+    };
+
+    dropZone.ondragover = function(e) { e.preventDefault(); };
+    dropZone.ondrop = function(e) {
+        e.preventDefault();
+        handleFiles(e.dataTransfer.files);
+    };
+
+    function handleFiles(files) {
+        for (var i = 0; i < files.length; i++) {
+            var file = files[i];
+            if (file.name.toLowerCase().endsWith('.stl')) {
+                readFile(file);
+            }
+        }
+    }
+
+    function readFile(file) {
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            var buffer = e.target.result;
+            stlFiles.push({ name: file.name, buffer: buffer });
+            renderList();
+            selectItem(stlFiles.length - 1);
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    function renderList() {
+        var container = document.getElementById('stl-list');
+        container.innerHTML = '';
+        stlFiles.forEach(function(item, idx) {
+            var div = document.createElement('div');
+            div.className = 'stl-item' + (idx === activeIdx ? ' active' : '');
+            div.onclick = function() { selectItem(idx); };
+            div.innerHTML = `
+                <span class="stl-name" title="${item.name}">${item.name}</span>
+                <button class="btn-del" onclick="deleteItem(event, ${idx})">&times;</button>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    window.selectItem = function(idx) {
+        if (idx < 0 || idx >= stlFiles.length) return;
+        activeIdx = idx;
+        renderList();
+        loadSTL(stlFiles[idx].buffer, stlFiles[idx].name);
+    };
+
+    window.deleteItem = function(e, idx) {
+        e.stopPropagation();
+        stlFiles.splice(idx, 1);
+        if (activeIdx === idx) {
+            if (currentMesh) scene.remove(currentMesh);
+            currentMesh = null;
+            activeIdx = -1;
+        } else if (activeIdx > idx) {
+            activeIdx--;
+        }
+        renderList();
+    };
+
+    init3D();
+</script>
+</body>
+</html>
