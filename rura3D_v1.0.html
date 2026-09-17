@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kreator Rury 3D Pro</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+        body { 
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            background: #121214; 
+            color: #e4e4e7; 
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        header { 
+            background: #18181b; 
+            padding: 14px 24px; 
+            border-bottom: 1px solid #27272a; 
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 10;
+        }
+        header h1 { 
+            font-size: 1.15rem; 
+            color: #2dd4bf; 
+            font-weight: 700; 
+            display: flex; 
+            align-items: center; 
+            gap: 10px; 
+        }
+
+        .app-layout {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+        }
+
+        @media (min-width: 850px) {
+            .app-layout {
+                flex-direction: row;
+                height: calc(100vh - 53px);
+                overflow: hidden;
+            }
+        }
+
+        .sidebar-controls { 
+            padding: 20px 24px 100px 24px; 
+            background: #121214; 
+            flex: 1;
+        }
+
+        @media (min-width: 850px) {
+            .sidebar-controls {
+                width: 420px;
+                min-width: 420px;
+                max-width: 420px;
+                overflow-y: auto;
+                border-right: 1px solid #27272a;
+                padding: 24px;
+                padding-bottom: 24px;
+                display: flex;
+                flex-direction: column;
+            }
+        }
+
+        .preview-area { 
+            background: #09090b; 
+            padding: 20px; 
+            position: sticky; 
+            top: 53px; 
+            z-index: 5; 
+            border-bottom: 1px solid #27272a; 
+            display: flex; 
+            flex-direction: column;
+            justify-content: center; 
+            align-items: center;
+        }
+
+        @media (min-width: 850px) {
+            .preview-area {
+                flex: 1;
+                position: relative;
+                top: 0;
+                border-bottom: none;
+                padding: 32px;
+            }
+        }
+
+        .canvas-wrapper {
+            width: 100%;
+            max-width: 320px;
+            aspect-ratio: 1 / 1;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        @media (min-width: 850px) {
+            .canvas-wrapper {
+                max-width: 620px;
+                max-height: 80vh;
+            }
+        }
+
+        canvas { 
+            background: #18181b; 
+            border-radius: 14px; 
+            border: 1px solid #27272a; 
+            width: 100%; 
+            height: 100%; 
+            display: block; 
+            box-shadow: 0 12px 32px rgba(0,0,0,0.5); 
+        }
+
+        .section-title { 
+            font-size: 0.78rem; 
+            font-weight: 700; 
+            text-transform: uppercase; 
+            letter-spacing: 0.06em; 
+            color: #71717a; 
+            margin: 20px 0 10px 4px; 
+        }
+        .section-title:first-child { margin-top: 0; }
+
+        .card { 
+            background: #18181b; 
+            border: 1px solid #27272a; 
+            border-radius: 12px; 
+            padding: 14px 16px; 
+            margin-bottom: 12px; 
+            transition: border-color 0.2s;
+        }
+        .card:hover { border-color: #3f3f46; }
+
+        .card-row { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 8px; 
+            font-size: 0.9rem; 
+        }
+        .card-row span:first-child { color: #d4d4d8; font-weight: 500; }
+        .val { 
+            color: #2dd4bf; 
+            font-weight: 700; 
+            font-family: monospace; 
+            background: rgba(45, 212, 191, 0.1); 
+            padding: 2px 8px; 
+            border-radius: 6px; 
+            font-size: 0.88rem;
+        }
+
+        input[type="range"] { 
+            width: 100%; 
+            height: 6px; 
+            background: #27272a; 
+            border-radius: 4px;
+            accent-color: #2dd4bf; 
+            cursor: pointer; 
+            outline: none;
+        }
+
+        .switch-card { display: flex; justify-content: space-between; align-items: center; }
+        .switch { position: relative; display: inline-block; width: 46px; height: 24px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider-switch { 
+            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; 
+            background-color: #27272a; transition: .2s; border-radius: 24px; 
+        }
+        .slider-switch:before { 
+            position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; 
+            background-color: #a1a1aa; transition: .2s; border-radius: 50%; 
+        }
+        input:checked + .slider-switch { background-color: #2dd4bf; }
+        input:checked + .slider-switch:before { transform: translateX(22px); background-color: #09090b; }
+
+        .point-item { 
+            background: #27272a; 
+            border-radius: 8px; 
+            padding: 12px; 
+            margin-top: 10px; 
+            border: 1px solid #3f3f46; 
+        }
+        .point-header { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 10px; 
+            font-size: 0.85rem; 
+            font-weight: 600; 
+            color: #2dd4bf; 
+        }
+        .btn-del { 
+            background: #ef4444; 
+            color: white; 
+            border: none; 
+            padding: 4px 10px; 
+            border-radius: 6px; 
+            font-size: 0.75rem; 
+            cursor: pointer; 
+            font-weight: 600; 
+        }
+        .btn-add { 
+            width: 100%; 
+            padding: 12px; 
+            background: #18181b; 
+            color: #2dd4bf; 
+            border: 1px dashed #2dd4bf; 
+            border-radius: 10px; 
+            font-weight: 600; 
+            cursor: pointer; 
+            margin-top: 6px; 
+            transition: background 0.2s;
+        }
+        .btn-add:hover { background: rgba(45, 212, 191, 0.08); }
+
+        .action-bar { 
+            position: fixed; 
+            bottom: 0; 
+            left: 0; 
+            right: 0; 
+            background: rgba(24, 24, 27, 0.95); 
+            backdrop-filter: blur(8px); 
+            padding: 16px; 
+            border-top: 1px solid #27272a; 
+            z-index: 100; 
+        }
+
+        @media (min-width: 850px) {
+            .action-bar {
+                position: static;
+                background: transparent;
+                border-top: none;
+                padding: 16px 0 0 0;
+                margin-top: auto;
+                backdrop-filter: none;
+            }
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+        }
+
+        button.export-btn { 
+            flex: 2; 
+            padding: 16px; 
+            background: #2dd4bf; 
+            color: #09090b; 
+            border: none; 
+            border-radius: 10px; 
+            font-weight: 700; 
+            font-size: 0.95rem; 
+            cursor: pointer; 
+            box-shadow: 0 4px 16px rgba(45, 212, 191, 0.25); 
+            transition: background 0.2s, transform 0.1s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        button.export-btn:hover { background: #14b8a6; }
+        button.export-btn:active { transform: scale(0.98); }
+
+        button.json-btn {
+            flex: 1;
+            padding: 16px;
+            background: #27272a;
+            color: #2dd4bf;
+            border: 1px solid #3f3f46;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 0.88rem;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        button.json-btn:hover { background: #3f3f46; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+            Kreator Rury 3D Pro
+        </h1>
+    </header>
+
+    <div class="app-layout">
+        <div class="sidebar-controls">
+            <div class="section-title">Podstawowe Wymiary</div>
+            
+            <div class="card">
+                <div class="card-row"><span>Wysokość całkowita (H)</span><span id="val-height" class="val">120 mm</span></div>
+                <input type="range" id="height" min="20" max="300" value="120">
+            </div>
+
+            <div class="card">
+                <div class="card-row"><span>Grubość ścianki</span><span id="val-thick" class="val">4 mm</span></div>
+                <input type="range" id="thick" min="1" max="15" value="4">
+            </div>
+
+            <div class="card">
+                <div class="card-row"><span>Promień dół (r_start)</span><span id="val-r1" class="val">20 mm</span></div>
+                <input type="range" id="r1" min="5" max="100" value="20">
+            </div>
+
+            <div class="card">
+                <div class="card-row"><span>Promień góra (r_end)</span><span id="val-r2" class="val">15 mm</span></div>
+                <input type="range" id="r2" min="5" max="100" value="15">
+            </div>
+
+            <div class="section-title">Punkty Pośrednie Profilu</div>
+            <div class="card">
+                <div id="points-list"></div>
+                <button class="btn-add" id="btn-add-point">+ Dodaj punkt pośredni</button>
+            </div>
+
+            <div class="section-title">Wykończenie i Jakość</div>
+            
+            <div class="card switch-card">
+                <div class="card-row" style="margin-bottom:0; flex:1;">
+                    <span>Zaokrąglenie krawędzi (Góra/Dół)</span>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" id="bevel-switch">
+                    <span class="slider-switch"></span>
+                </label>
+            </div>
+
+            <div class="card" id="bevel-params-card" style="display: none;">
+                <div class="card-row"><span>Promień zaokrąglenia</span><span id="val-bevel-radius" class="val">1.5 mm</span></div>
+                <input type="range" id="bevel-radius" min="0.5" max="5" step="0.5" value="1.5">
+            </div>
+
+            <div class="card">
+                <div class="card-row"><span>Gładkość okręgu (segmenty)</span><span id="val-seg" class="val">64</span></div>
+                <input type="range" id="seg" min="16" max="120" value="64">
+            </div>
+
+            <div class="action-bar">
+                <div class="button-group">
+                    <button class="export-btn" id="btn-export">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                        STL
+                    </button>
+                    <button class="json-btn" id="btn-json">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                        JSON
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="preview-area">
+            <div class="canvas-wrapper">
+                <canvas id="canvas"></canvas>
+            </div>
+        </div>
+    </div>
+
+<script>
+(function() {
+    window.addEventListener('DOMContentLoaded', function() {
+        var canvas = document.getElementById('canvas');
+        if (!canvas) return;
+        var ctx = canvas.getContext('2d');
+
+        var inputs = {
+            height: document.getElementById('height'),
+            thick: document.getElementById('thick'),
+            r1: document.getElementById('r1'),
+            r2: document.getElementById('r2'),
+            seg: document.getElementById('seg'),
+            bevelSwitch: document.getElementById('bevel-switch'),
+            bevelRadius: document.getElementById('bevel-radius')
+        };
+
+        var vals = {
+            height: document.getElementById('val-height'),
+            thick: document.getElementById('val-thick'),
+            r1: document.getElementById('val-r1'),
+            r2: document.getElementById('val-r2'),
+            seg: document.getElementById('val-seg'),
+            bevelRadius: document.getElementById('val-bevel-radius')
+        };
+
+        var midPoints = [
+            { r: 35, z: 50 }
+        ];
+
+        function resizeCanvas() {
+            var wrapper = canvas.parentElement;
+            var rect = wrapper.getBoundingClientRect();
+            var dpr = window.devicePixelRatio || 1;
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            render();
+        }
+
+        function renderPointsUI() {
+            var container = document.getElementById('points-list');
+            container.innerHTML = '';
+
+            midPoints.forEach(function(pt, idx) {
+                var div = document.createElement('div');
+                div.className = 'point-item';
+                div.innerHTML = `
+                    <div class="point-header">
+                        <span>Punkt #${idx + 1}</span>
+                        <button class="btn-del" onclick="removePoint(${idx})">Usuń</button>
+                    </div>
+                    <div class="card-row"><span>Promień (r)</span><span id="val-pt-r-${idx}" class="val">${pt.r} mm</span></div>
+                    <input type="range" min="5" max="100" value="${pt.r}" oninput="updatePoint(${idx}, 'r', this.value)">
+                    <div class="card-row" style="margin-top:10px;"><span>Wysokość (z)</span><span id="val-pt-z-${idx}" class="val">${pt.z} mm</span></div>
+                    <input type="range" min="0" max="${inputs.height.value}" value="${pt.z}" oninput="updatePoint(${idx}, 'z', this.value)">
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        window.updatePoint = function(idx, field, val) {
+            var parsed = parseFloat(val);
+            midPoints[idx][field] = parsed;
+            
+            // Poprawka 1: Bezpośrednia aktualizacja wartości numerycznej w etykiecie
+            var label = document.getElementById('val-pt-' + field + '-' + idx);
+            if (label) {
+                label.textContent = parsed + " mm";
+            }
+            render();
+        };
+
+        window.removePoint = function(idx) {
+            midPoints.splice(idx, 1);
+            renderPointsUI();
+            render();
+        };
+
+        document.getElementById('btn-add-point').onclick = function() {
+            var H = parseFloat(inputs.height.value);
+            var newZ = Math.round(H / 2);
+            midPoints.push({ r: 25, z: newZ });
+            renderPointsUI();
+            render();
+        };
+
+        inputs.bevelSwitch.onchange = function() {
+            document.getElementById('bevel-params-card').style.display = this.checked ? 'block' : 'none';
+            render();
+        };
+
+        function getRadius(z, H, r1, r2) {
+            var all = [{ z: 0, r: r1 }];
+            midPoints.forEach(function(p) { all.push({ z: Math.min(p.z, H), r: p.r }); });
+            all.push({ z: H, r: r2 });
+
+            all.sort(function(a, b) { return a.z - b.z; });
+
+            if (z <= all[0].z) return all[0].r;
+            if (z >= all[all.length - 1].z) return all[all.length - 1].r;
+
+            for (var i = 0; i < all.length - 1; i++) {
+                if (z >= all[i].z && z <= all[i+1].z) {
+                    var dz = all[i+1].z - all[i].z;
+                    if (dz === 0) return all[i].r;
+                    var t = (z - all[i].z) / dz;
+                    return all[i].r + t * (all[i+1].r - all[i].r);
+                }
+            }
+            return r1;
+        }
+
+        function render() {
+            var w = canvas.width;
+            var h = canvas.height;
+            if (w === 0 || h === 0) return;
+
+            var H = parseFloat(inputs.height.value);
+            var th = parseFloat(inputs.thick.value);
+            var r1 = parseFloat(inputs.r1.value);
+            var r2 = parseFloat(inputs.r2.value);
+            var bevelOn = inputs.bevelSwitch.checked;
+            var bevelR = parseFloat(inputs.bevelRadius.value);
+
+            // Zabezpieczenie promienia zaokrąglenia (max 40% grubości ścianki)
+            if (bevelR > th * 0.4) {
+                bevelR = th * 0.4;
+            }
+
+            vals.height.textContent = H + " mm";
+            vals.thick.textContent = th + " mm";
+            vals.r1.textContent = r1 + " mm";
+            vals.r2.textContent = r2 + " mm";
+            vals.seg.textContent = inputs.seg.value;
+            vals.bevelRadius.textContent = bevelR.toFixed(1) + " mm";
+
+            ctx.clearRect(0, 0, w, h);
+
+            var cx = w / 2;
+            var bottomY = h - (40 * (w / 400));
+            
+            var maxR = Math.max(r1, r2, 10);
+            midPoints.forEach(function(p) { if(p.r > maxR) maxR = p.r; });
+
+            var scaleY = (h - (80 * (w / 400))) / Math.max(H, 10);
+            var scaleX = (w / 2 - (40 * (w / 400))) / maxR;
+            var scale = Math.min(scaleY, scaleX);
+
+            ctx.strokeStyle = '#3f3f46';
+            ctx.lineWidth = 1.5 * (w / 400);
+            ctx.setLineDash([4 * (w / 400), 4 * (w / 400)]);
+            ctx.beginPath();
+            ctx.moveTo(cx, bottomY + 20 * (w / 400));
+            ctx.lineTo(cx, bottomY - H * scale - 20 * (w / 400));
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            var outerP = [], innerP = [];
+            var steps = 140;
+            for (var i = 0; i <= steps; i++) {
+                var z = (i / steps) * H;
+                var ro = getRadius(z, H, r1, r2);
+                var ri = Math.max(0, ro - th);
+
+                // Poprawka 2: Delikatne zaokrąglenie krawędzi górnej i dolnej (Bevel Top & Bottom)
+                if (bevelOn && bevelR > 0) {
+                    if (z >= (H - bevelR)) {
+                        var bz = z - (H - bevelR);
+                        var angle = (bz / bevelR) * (Math.PI / 2);
+                        var offset = bevelR * (1 - Math.cos(angle));
+                        ro -= offset;
+                        ri += offset;
+                    } else if (z <= bevelR) {
+                        var bz = bevelR - z;
+                        var angle = (bz / bevelR) * (Math.PI / 2);
+                        var offset = bevelR * (1 - Math.cos(angle));
+                        ro -= offset;
+                        ri += offset;
+                    }
+                }
+
+                var py = bottomY - z * scale;
+                outerP.push({ x: ro * scale, y: py });
+                innerP.push({ x: ri * scale, y: py });
+            }
+
+            function drawSide(dir) {
+                ctx.fillStyle = 'rgba(45, 212, 191, 0.22)';
+                ctx.strokeStyle = '#2dd4bf';
+                ctx.lineWidth = 2.5 * (w / 400);
+                ctx.beginPath();
+                ctx.moveTo(cx + dir * outerP[0].x, outerP[0].y);
+                for (var p = 0; p < outerP.length; p++) ctx.lineTo(cx + dir * outerP[p].x, outerP[p].y);
+                for (var p = innerP.length - 1; p >= 0; p--) ctx.lineTo(cx + dir * innerP[p].x, innerP[p].y);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+            }
+
+            drawSide(1);
+            drawSide(-1);
+
+            midPoints.forEach(function(pt) {
+                var pz = Math.min(pt.z, H);
+                var py = bottomY - pz * scale;
+                var pr = getRadius(pz, H, r1, r2);
+                ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+                ctx.setLineDash([3 * (w / 400), 3 * (w / 400)]);
+                ctx.beginPath();
+                ctx.moveTo(cx - pr * scale, py);
+                ctx.lineTo(cx + pr * scale, py);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            });
+        }
+
+        for (var key in inputs) {
+            if (inputs.hasOwnProperty(key)) {
+                inputs[key].oninput = render;
+                inputs[key].onchange = render;
+            }
+        }
+
+        document.getElementById('btn-export').onclick = function() {
+            var H = parseFloat(inputs.height.value);
+            var th = parseFloat(inputs.thick.value);
+            var r1 = parseFloat(inputs.r1.value);
+            var r2 = parseFloat(inputs.r2.value);
+            var segments = parseInt(inputs.seg.value);
+            var bevelOn = inputs.bevelSwitch.checked;
+            var bevelR = parseFloat(inputs.bevelRadius.value);
+
+            if (bevelR > th * 0.4) bevelR = th * 0.4;
+
+            var z_steps = Math.max(Math.floor(H * 1.5), 60);
+            var triangles = [];
+
+            function addQuad(p1, p2, p3, p4) {
+                triangles.push([p1, p2, p3]);
+                triangles.push([p1, p3, p4]);
+            }
+
+            var grid = [];
+            for (var i = 0; i <= z_steps; i++) {
+                var z = (i / z_steps) * H;
+                var ro = getRadius(z, H, r1, r2);
+                var ri = Math.max(0, ro - th);
+
+                if (bevelOn && bevelR > 0) {
+                    if (z >= (H - bevelR)) {
+                        var bz = z - (H - bevelR);
+                        var angle = (bz / bevelR) * (Math.PI / 2);
+                        var offset = bevelR * (1 - Math.cos(angle));
+                        ro -= offset;
+                        ri += offset;
+                    } else if (z <= bevelR) {
+                        var bz = bevelR - z;
+                        var angle = (bz / bevelR) * (Math.PI / 2);
+                        var offset = bevelR * (1 - Math.cos(angle));
+                        ro -= offset;
+                        ri += offset;
+                    }
+                }
+
+                var rowO = [], rowI = [];
+                for (var j = 0; j < segments; j++) {
+                    var angle = (j / segments) * 2 * Math.PI;
+                    rowO.push([ro * Math.cos(angle), ro * Math.sin(angle), z]);
+                    rowI.push([ri * Math.cos(angle), ri * Math.sin(angle), z]);
+                }
+                grid.push({ o: rowO, i: rowI });
+            }
+
+            for (var i = 0; i < z_steps; i++) {
+                for (var j = 0; j < segments; j++) {
+                    var nj = (j + 1) % segments;
+                    addQuad(grid[i].o[j], grid[i+1].o[j], grid[i+1].o[nj], grid[i].o[nj]);
+                    addQuad(grid[i].i[j], grid[i].i[nj], grid[i+1].i[nj], grid[i+1].i[j]);
+                }
+            }
+
+            for (var j = 0; j < segments; j++) {
+                var nj = (j + 1) % segments;
+                addQuad(grid[0].o[j], grid[0].o[nj], grid[0].i[nj], grid[0].i[j]);
+            }
+
+            for (var j = 0; j < segments; j++) {
+                var nj = (j + 1) % segments;
+                addQuad(grid[z_steps].o[j], grid[z_steps].i[j], grid[z_steps].i[nj], grid[z_steps].o[nj]);
+            }
+
+            var buffer = new ArrayBuffer(80 + 4 + triangles.length * 50);
+            var view = new DataView(buffer);
+            var offset = 84;
+
+            view.setUint32(80, triangles.length, true);
+
+            for (var t = 0; t < triangles.length; t++) {
+                var tri = triangles[t];
+                offset += 12;
+                for (var p = 0; p < 3; p++) {
+                    var pt = tri[p];
+                    view.setFloat32(offset, pt[0], true);
+                    view.setFloat32(offset + 4, pt[1], true);
+                    view.setFloat32(offset + 8, pt[2], true);
+                    offset += 12;
+                }
+                offset += 2;
+            }
+
+            var blob = new Blob([buffer], { type: 'application/octet-stream' });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = 'rura_custom.stl';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        };
+
+        // Poprawka 3: Eksport parametrów projektu do JSON
+        document.getElementById('btn-json').onclick = function() {
+            var projectData = {
+                generator: "Kreator Rury 3D Pro",
+                height: parseFloat(inputs.height.value),
+                wallThickness: parseFloat(inputs.thick.value),
+                rStart: parseFloat(inputs.r1.value),
+                rEnd: parseFloat(inputs.r2.value),
+                segments: parseInt(inputs.seg.value),
+                bevelEnabled: inputs.bevelSwitch.checked,
+                bevelRadius: parseFloat(inputs.bevelRadius.value),
+                intermediatePoints: midPoints
+            };
+
+            var blob = new Blob([JSON.stringify(projectData, null, 2)], { type: 'application/json' });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = 'projekt_rury.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        };
+
+        window.addEventListener('resize', resizeCanvas);
+        renderPointsUI();
+        resizeCanvas();
+    });
+})();
+</script>
+</body>
+</html>
