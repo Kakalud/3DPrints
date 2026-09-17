@@ -169,8 +169,6 @@
     
     <!-- Loadery STL i 3MF -->
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/STLLoader.js"></script>
-    
-    <!-- Three.js (r128) używa fflate (nie JSZip) do dekompresji plików .3mf -->
     <script src="https://cdn.jsdelivr.net/npm/fflate@0.6.9/umd/index.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/3MFLoader.js"></script>
 </head>
@@ -296,20 +294,18 @@
                 fitCameraToGroup(group);
             }, undefined, function(err) {
                 console.error('Błąd ładowania STL:', err);
-                alert("Nie udało się załadować pliku STL.");
+                alert('Nie udało się załadować pliku STL.');
             });
         } else if (ext === '3mf') {
             var mfLoader = new THREE.3MFLoader();
             mfLoader.load(url, function(object) {
-                // Konfiguracja komponentów 3MF
                 object.traverse(function(child) {
                     if (child.isMesh) {
-                        child.material = material; // nadpisujemy domyślny kolor materiałem
+                        child.material = material;
                         if(child.geometry) child.geometry.computeVertexNormals();
                     }
                 });
 
-                // Środkowanie całego obiektu 3MF
                 var box = new THREE.Box3().setFromObject(object);
                 var center = box.getCenter(new THREE.Vector3());
                 object.position.sub(center);
@@ -318,7 +314,7 @@
                 fitCameraToGroup(group);
             }, undefined, function(err) {
                 console.error('Błąd ładowania 3MF:', err);
-                alert("Nie udało się załadować pliku 3MF. Sprawdź, czy archiwum nie jest uszkodzone.");
+                alert('Nie udało się załadować pliku 3MF.');
             });
         }
     }
@@ -327,7 +323,7 @@
         var box = new THREE.Box3().setFromObject(group);
         var size = box.getSize(new THREE.Vector3());
         var maxDim = Math.max(size.x, size.y, size.z);
-        if(maxDim === 0) maxDim = 100; // zabezpieczenie dla pustych brył
+        if(maxDim === 0) maxDim = 100;
         
         camera.position.set(maxDim * 1.5, maxDim * 1.5, maxDim * 1.5);
         camera.lookAt(0, 0, 0);
@@ -338,7 +334,6 @@
         var listContainer = document.getElementById('stl-list');
         listContainer.innerHTML = '<div class="loading-state">Pobieranie listy z GitHub...</div>';
 
-        // Zapobiega cachowaniu przyciskowi odśwież
         var apiUrl = 'https://api.github.com/repos/' + GITHUB_USER + '/' + GITHUB_REPO + '/contents/?t=' + new Date().getTime();
 
         fetch(apiUrl)
@@ -362,7 +357,6 @@
                 }).map(function(file) {
                     return {
                         name: file.name,
-                        // Bezpośredni link pobierania z surowego GitHuba (omija błędy CORS i typu plików)
                         url: file.download_url
                     };
                 });
@@ -373,7 +367,6 @@
                 }
 
                 renderList();
-                // Automatyczne załadowanie pierwszego pliku po pobraniu listy
                 selectItem(0);
             })
             .catch(function(err) {
@@ -389,10 +382,12 @@
             var div = document.createElement('div');
             div.className = 'stl-item' + (idx === activeIdx ? ' active' : '');
             div.onclick = function() { selectItem(idx); };
-            div.innerHTML = `
-                <svg class="stl-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
-                <span class="stl-name" title="${item.name}">${item.name}</span>
-            `;
+            
+            // Użycie standardowego łączenia stringów w celu uniknięcia błędów parsowania
+            div.innerHTML = 
+                '<svg class="stl-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>' +
+                '<span class="stl-name" title="' + item.name + '">' + item.name + '</span>';
+                
             container.appendChild(div);
         });
     }
