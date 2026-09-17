@@ -162,30 +162,35 @@
             color: #a1a1aa;
         }
     </style>
-    <!-- Three.js + JSZip + STLLoader + 3MFLoader + OrbitControls -->
+    
+    <!-- Silnik 3D -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/STLLoader.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/3MFLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    
+    <!-- Loadery STL i 3MF -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/STLLoader.js"></script>
+    
+    <!-- Three.js (r128) używa fflate (nie JSZip) do dekompresji plików .3mf -->
+    <script src="https://cdn.jsdelivr.net/npm/fflate@0.6.9/umd/index.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/3MFLoader.js"></script>
 </head>
 <body>
 
     <header>
         <h1>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-            Przeglądarka STL & 3MF 3D
+            Przeglądarka STL & 3MF
         </h1>
-        <a href="index.html">&larr; Powrót do menu głównego</a>
+        <a href="index.html">&larr; Powrót do menu</a>
     </header>
 
     <div class="app-container">
         <div class="sidebar">
             <div class="sidebar-title">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2dd4bf" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
-                Pliki z Repozytorium
+                Pliki z GitHuba
             </div>
-            <div class="sidebar-subtitle">Pobiera pliki .stl oraz .3mf bezpośrednio z GitHuba</div>
+            <div class="sidebar-subtitle">Wykrywa pliki .stl oraz .3mf</div>
 
             <button class="refresh-btn" id="btn-refresh">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
@@ -193,18 +198,19 @@
             </button>
 
             <div class="stl-list" id="stl-list">
-                <div class="loading-state">Ładowanie plików z GitHub...</div>
+                <div class="loading-state">Pobieranie listy z GitHub...</div>
             </div>
         </div>
 
         <div class="viewport">
             <canvas id="canvas-3d"></canvas>
-            <div class="info-overlay" id="info-overlay">LPM = obrót | PPM = przesunięcie | Rolka = powiększenie</div>
+            <div class="info-overlay" id="info-overlay">LPM = obrót | PPM = przesunięcie | Rolka = zoom</div>
         </div>
     </div>
 
 <script>
-    var scene, camera, renderer, controls, currentObject;
+    var scene, camera, renderer, controls;
+    var currentObjects = [];
     var modelFiles = [];
     var activeIdx = -1;
 
@@ -259,11 +265,15 @@
         renderer.setSize(container.clientWidth, container.clientHeight);
     }
 
+    function clearScene() {
+        currentObjects.forEach(function(obj) {
+            scene.remove(obj);
+        });
+        currentObjects = [];
+    }
+
     function loadModel(url, fileName) {
-        if (currentObject) {
-            scene.remove(currentObject);
-            currentObject = null;
-        }
+        clearScene();
 
         var ext = fileName.split('.').pop().toLowerCase();
         var material = new THREE.MeshStandardMaterial({
@@ -272,54 +282,53 @@
             metalness: 0.2
         });
 
+        var group = new THREE.Group();
+        scene.add(group);
+        currentObjects.push(group);
+
         if (ext === 'stl') {
-            var loader = new THREE.STLLoader();
-            loader.load(url, function(geometry) {
+            var stlLoader = new THREE.STLLoader();
+            stlLoader.load(url, function(geometry) {
                 geometry.computeVertexNormals();
                 geometry.center();
-
                 var mesh = new THREE.Mesh(geometry, material);
-                currentObject = mesh;
-                scene.add(currentObject);
-                fitCameraToObject(geometry);
+                group.add(mesh);
+                fitCameraToGroup(group);
             }, undefined, function(err) {
                 console.error('Błąd ładowania STL:', err);
+                alert("Nie udało się załadować pliku STL.");
             });
         } else if (ext === '3mf') {
-            var loader = new THREE.3MFLoader();
-            loader.load(url, function(object) {
+            var mfLoader = new THREE.3MFLoader();
+            mfLoader.load(url, function(object) {
+                // Konfiguracja komponentów 3MF
                 object.traverse(function(child) {
                     if (child.isMesh) {
-                        child.material = material;
-                        child.geometry.computeVertexNormals();
+                        child.material = material; // nadpisujemy domyślny kolor materiałem
+                        if(child.geometry) child.geometry.computeVertexNormals();
                     }
                 });
 
+                // Środkowanie całego obiektu 3MF
                 var box = new THREE.Box3().setFromObject(object);
                 var center = box.getCenter(new THREE.Vector3());
                 object.position.sub(center);
 
-                currentObject = object;
-                scene.add(currentObject);
-                fitCameraToObjectBox(box);
+                group.add(object);
+                fitCameraToGroup(group);
             }, undefined, function(err) {
                 console.error('Błąd ładowania 3MF:', err);
+                alert("Nie udało się załadować pliku 3MF. Sprawdź, czy archiwum nie jest uszkodzone.");
             });
         }
     }
 
-    function fitCameraToObject(geometry) {
-        geometry.computeBoundingBox();
-        var box = geometry.boundingBox;
-        var maxDim = Math.max(box.max.x - box.min.x, box.max.y - box.min.y, box.max.z - box.min.z);
-        camera.position.set(maxDim * 1.5, maxDim * 1.5, maxDim * 1.5);
-        camera.lookAt(0, 0, 0);
-        controls.target.set(0, 0, 0);
-    }
-
-    function fitCameraToObjectBox(box) {
+    function fitCameraToGroup(group) {
+        var box = new THREE.Box3().setFromObject(group);
         var size = box.getSize(new THREE.Vector3());
         var maxDim = Math.max(size.x, size.y, size.z);
+        if(maxDim === 0) maxDim = 100; // zabezpieczenie dla pustych brył
+        
         camera.position.set(maxDim * 1.5, maxDim * 1.5, maxDim * 1.5);
         camera.lookAt(0, 0, 0);
         controls.target.set(0, 0, 0);
@@ -327,38 +336,49 @@
 
     function fetchRepoFiles() {
         var listContainer = document.getElementById('stl-list');
-        listContainer.innerHTML = '<div class="loading-state">Pobieranie listy modeli z GitHub...</div>';
+        listContainer.innerHTML = '<div class="loading-state">Pobieranie listy z GitHub...</div>';
 
-        var apiUrl = 'https://api.github.com/repos/' + GITHUB_USER + '/' + GITHUB_REPO + '/contents/';
+        // Zapobiega cachowaniu przyciskowi odśwież
+        var apiUrl = 'https://api.github.com/repos/' + GITHUB_USER + '/' + GITHUB_REPO + '/contents/?t=' + new Date().getTime();
 
         fetch(apiUrl)
             .then(function(response) {
-                if (!response.ok) throw new Error('API HTTP error ' + response.status);
+                if (!response.ok) {
+                    if (response.status === 403) {
+                        throw new Error('Limit zapytań (Rate Limit) do API GitHuba wyczerpany. Odczekaj do pełnej godziny.');
+                    }
+                    throw new Error('Błąd połączenia z API: ' + response.status);
+                }
                 return response.json();
             })
             .then(function(data) {
+                if (!Array.isArray(data)) {
+                    throw new Error('Błędna odpowiedź serwera.');
+                }
+
                 modelFiles = data.filter(function(file) {
                     var name = file.name.toLowerCase();
                     return name.endsWith('.stl') || name.endsWith('.3mf');
                 }).map(function(file) {
                     return {
                         name: file.name,
-                        // Użycie bezpośredniego adresu z GitHub RAW rozwiąże problem z typem MIME dla .3mf
-                        url: file.download_url || ('./' + file.name)
+                        // Bezpośredni link pobierania z surowego GitHuba (omija błędy CORS i typu plików)
+                        url: file.download_url
                     };
                 });
 
                 if (modelFiles.length === 0) {
-                    listContainer.innerHTML = '<div class="empty-state">Brak plików .stl lub .3mf w głównym folderze.</div>';
+                    listContainer.innerHTML = '<div class="empty-state">Brak plików .stl lub .3mf w repozytorium.</div>';
                     return;
                 }
 
                 renderList();
+                // Automatyczne załadowanie pierwszego pliku po pobraniu listy
                 selectItem(0);
             })
             .catch(function(err) {
-                console.error('Błąd połączenia z API GitHub:', err);
-                listContainer.innerHTML = '<div class="empty-state">Nie udało się pobrać listy plików. Odśwież stronę.</div>';
+                console.error(err);
+                listContainer.innerHTML = '<div class="empty-state" style="color: #ef4444; font-weight: bold;">' + err.message + '</div>';
             });
     }
 
