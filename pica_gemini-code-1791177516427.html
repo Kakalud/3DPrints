@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kreator Szyn Picatinny 3D Pro</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+        body { 
+            font-family: system-ui, -apple-system, sans-serif; 
+            background: #121214; 
+            color: #e4e4e7; 
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        header { 
+            background: #18181b; 
+            padding: 14px 24px; 
+            border-bottom: 1px solid #27272a; 
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 10;
+        }
+        header h1 { 
+            font-size: 1.15rem; 
+            color: #2dd4bf; 
+            font-weight: 700; 
+            display: flex; 
+            align-items: center; 
+            gap: 10px; 
+        }
+
+        .app-layout {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+        }
+
+        @media (min-width: 850px) {
+            .app-layout {
+                flex-direction: row;
+                height: calc(100vh - 53px);
+                overflow: hidden;
+            }
+        }
+
+        .sidebar-controls { 
+            padding: 20px 24px 100px 24px; 
+            background: #121214; 
+            flex: 1;
+        }
+
+        @media (min-width: 850px) {
+            .sidebar-controls {
+                width: 440px;
+                min-width: 440px;
+                max-width: 440px;
+                overflow-y: auto;
+                border-right: 1px solid #27272a;
+                padding: 24px;
+                padding-bottom: 24px;
+                display: flex;
+                flex-direction: column;
+            }
+        }
+
+        .preview-area { 
+            background: #09090b; 
+            padding: 20px; 
+            position: sticky; 
+            top: 53px; 
+            z-index: 5; 
+            border-bottom: 1px solid #27272a; 
+            display: flex; 
+            flex-direction: column;
+            justify-content: center; 
+            align-items: center;
+        }
+
+        @media (min-width: 850px) {
+            .preview-area {
+                flex: 1;
+                position: relative;
+                top: 0;
+                border-bottom: none;
+                padding: 32px;
+            }
+        }
+
+        .canvas-wrapper {
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            max-height: 80vh;
+            position: relative;
+        }
+
+        canvas { 
+            background: #18181b; 
+            border-radius: 14px; 
+            border: 1px solid #27272a; 
+            width: 100%; 
+            height: 100%; 
+            display: block; 
+            box-shadow: 0 12px 32px rgba(0,0,0,0.5); 
+        }
+
+        .section-title { 
+            font-size: 0.78rem; 
+            font-weight: 700; 
+            text-transform: uppercase; 
+            letter-spacing: 0.06em; 
+            color: #71717a; 
+            margin: 20px 0 10px 4px; 
+        }
+        .section-title:first-child { margin-top: 0; }
+
+        .card { 
+            background: #18181b; 
+            border: 1px solid #27272a; 
+            border-radius: 12px; 
+            padding: 14px 16px; 
+            margin-bottom: 12px; 
+        }
+
+        .card-row { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 8px; 
+            font-size: 0.9rem; 
+        }
+        .val { 
+            color: #2dd4bf; 
+            font-weight: 700; 
+            font-family: monospace; 
+            background: rgba(45, 212, 191, 0.1); 
+            padding: 2px 8px; 
+            border-radius: 6px; 
+            font-size: 0.88rem;
+        }
+
+        input[type="range"] { 
+            width: 100%; height: 6px; background: #27272a; border-radius: 4px;
+            accent-color: #2dd4bf; cursor: pointer; outline: none;
+        }
+
+        select {
+            width: 100%; background: #27272a; color: #fff;
+            border: 1px solid #3f3f46; padding: 8px; border-radius: 6px;
+            outline: none; font-size: 0.85rem; cursor: pointer;
+        }
+        select:focus { border-color: #2dd4bf; }
+
+        .action-bar { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(24, 24, 27, 0.95); backdrop-filter: blur(8px); padding: 16px; border-top: 1px solid #27272a; z-index: 100; }
+        @media (min-width: 850px) { .action-bar { position: static; background: transparent; border-top: none; padding: 16px 0 0 0; margin-top: auto; backdrop-filter: none; } }
+
+        button.export-btn { width: 100%; padding: 16px; background: #2dd4bf; color: #09090b; border: none; border-radius: 10px; font-weight: 700; font-size: 0.95rem; cursor: pointer; box-shadow: 0 4px 16px rgba(45, 212, 191, 0.25); transition: background 0.2s, transform 0.1s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        button.export-btn:hover { background: #14b8a6; }
+        button.export-btn:active { transform: scale(0.98); }
+        
+        .hint-text { font-size: 0.75rem; color: #71717a; margin-top: -4px; margin-bottom: 12px; display: block; line-height: 1.4; }
+
+        .telemetry { background: rgba(45, 212, 191, 0.05); border: 1px solid #2dd4bf; border-radius: 8px; padding: 12px; margin-bottom: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .telemetry-item { display: flex; flex-direction: column; }
+        .telemetry-label { font-size: 0.7rem; color: #a1a1aa; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px; }
+        .telemetry-value { font-size: 1.1rem; color: #2dd4bf; font-weight: 700; font-family: monospace; }
+        .telemetry-item.full { grid-column: 1 / -1; border-top: 1px solid rgba(45, 212, 191, 0.2); padding-top: 8px; margin-top: 2px; }
+    </style>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/STLExporter.js"></script>
+</head>
+<body>
+
+    <header>
+        <h1>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line><line x1="15" y1="3" x2="15" y2="21"></line><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line></svg>
+            Kreator Szyn Picatinny 3D
+        </h1>
+    </header>
+
+    <div class="app-layout">
+        <div class="sidebar-controls">
+
+            <div class="telemetry">
+                <div class="telemetry-item full">
+                    <span class="telemetry-label">Długość Całkowita</span>
+                    <span class="telemetry-value" id="info-l">0.0 mm</span>
+                </div>
+                <div class="telemetry-item">
+                    <span class="telemetry-label">Szerokość Bazy</span>
+                    <span class="telemetry-value" id="info-w">0.0 mm</span>
+                </div>
+                <div class="telemetry-item">
+                    <span class="telemetry-label">Najwyższy punkt</span>
+                    <span class="telemetry-value" id="info-h">0.0 mm</span>
+                </div>
+            </div>
+
+            <!-- TABELA WYMIARÓW STANDARDU -->
+            <div class="card" style="background: rgba(45, 212, 191, 0.05); border-color: rgba(45, 212, 191, 0.2);">
+                <div style="font-size: 0.8rem; color: #2dd4bf; margin-bottom: 8px; font-weight: bold;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align: text-top; margin-right: 4px;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                    Wymiary zębów (MIL-STD-1913)
+                </div>
+                <div style="font-size: 0.75rem; color: #a1a1aa; line-height: 1.6; display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
+                    <span>Szer. szczytu: <b style="color:#e4e4e7">21.2 mm</b></span>
+                    <span>Szer. rdzenia: <b style="color:#e4e4e7">15.6 mm</b></span>
+                    <span>Dł. zęba: <b style="color:#e4e4e7">4.8 mm</b></span>
+                    <span>Dł. szczeliny: <b style="color:#e4e4e7">5.2 mm</b></span>
+                    <span>Skok zębów: <b style="color:#e4e4e7">10.0 mm</b></span>
+                    <span>Gł. szczeliny: <b style="color:#e4e4e7">3.0 mm</b></span>
+                </div>
+            </div>
+            
+            <div class="section-title">Parametry Szyny</div>
+            <div class="card">
+                <div class="card-row" style="margin-bottom: 10px;">
+                    <span>Kształt profilu szczebelków</span>
+                </div>
+                <select id="railProfile" style="margin-bottom: 16px;">
+                    <option value="trapez">Trapez (Standard Picatinny 45°)</option>
+                    <option value="inv_trapez">Trapez Odwrócony (Szeroki dół, wąska góra)</option>
+                    <option value="rect">Prostokąt (Kąt prosty / 90°)</option>
+                </select>
+
+                <div class="card-row">
+                    <span>Ilość zębów (Szczebelków)</span><span id="val-slots" class="val">12</span>
+                </div>
+                <input type="range" id="slots" min="1" max="40" step="1" value="12" style="margin-bottom: 12px;">
+
+                <div class="card-row">
+                    <span>Szerokość bazy montażowej</span><span id="val-totalW" class="val">25.0 mm</span>
+                </div>
+                <!-- Odblokowany krok co 0.2mm oraz zejście do 10mm -->
+                <input type="range" id="totalW" min="10.0" max="60.0" step="0.2" value="25.0">
+                <span class="hint-text" style="margin-top: 8px;">Ustaw na 21.2mm by idealnie zlicować ze standardowymi zębami, lub mniej, by zęby wystawały poza bazę.</span>
+
+                <div class="card-row" style="margin-top: 12px;">
+                    <span>Grubość bazy (Płyty)</span><span id="val-baseT" class="val">3.0 mm</span>
+                </div>
+                <input type="range" id="baseT" min="1.0" max="15.0" step="0.5" value="3.0">
+
+                <div class="card-row" style="margin-top: 16px;">
+                    <span style="color: #2dd4bf;">Wysokość szyny (nad bazą)</span><span id="val-railH" class="val">5.0 mm</span>
+                </div>
+                <input type="range" id="railH" min="0.0" max="20.0" step="0.5" value="5.0">
+                <span class="hint-text" style="margin-top: 8px;">Ustawienie 0.0 mm ukryje całkowicie zęby i zostawi samą płaską bazę.</span>
+            </div>
+
+            <div class="section-title">Krańce / Otwory Montażowe</div>
+            <div class="card">
+                <div class="card-row">
+                    <span>Odstęp szyny od krańców</span><span id="val-endGap" class="val">0.0 mm</span>
+                </div>
+                <input type="range" id="endGap" min="0.0" max="20.0" step="1.0" value="0.0">
+                <span class="hint-text" style="margin-top: 8px;">Wolna płaska strefa pomiędzy zębami a strefą otworu.</span>
+
+                <div class="card-row" style="margin-top: 12px;">
+                    <span>Długość strefy z otworem</span><span id="val-endP" class="val">15.0 mm</span>
+                </div>
+                <input type="range" id="endP" min="0" max="40" step="1" value="15">
+                
+                <div class="card-row" style="margin-top: 16px;">
+                    <span>Wysokość/Grubość krańców</span><span id="val-endH" class="val">3.0 mm</span>
+                </div>
+                <input type="range" id="endH" min="1.0" max="20.0" step="0.5" value="3.0">
+                <span class="hint-text" style="margin-top: 8px;">Ustaw równą z "Grubością bazy", aby zrównać (flush). Większa wartość zbuduje podniesiony bloczek.</span>
+
+                <div class="card-row" style="margin-top: 16px;">
+                    <span style="color: #2dd4bf;">Średnica otworu na wylot</span><span id="val-holeD" class="val">7.0 mm</span>
+                </div>
+                <input type="range" id="holeD" min="0" max="20" step="0.5" value="7.0">
+                <span class="hint-text" style="margin-top: 8px;">Wartość 0 likwiduje dziury.</span>
+            </div>
+
+            <div class="action-bar">
+                <button class="export-btn" id="btn-export">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    Pobierz plik STL
+                </button>
+            </div>
+        </div>
+
+        <div class="preview-area">
+            <div class="canvas-wrapper">
+                <canvas id="canvas"></canvas>
+            </div>
+        </div>
+    </div>
+
+<script>
+let scene, camera, renderer, controls, railGroup;
+
+const ui = {
+    slots: document.getElementById('slots'),
+    totalW: document.getElementById('totalW'),
+    baseT: document.getElementById('baseT'),
+    railH: document.getElementById('railH'),
+    railProfile: document.getElementById('railProfile'),
+    endGap: document.getElementById('endGap'),
+    endP: document.getElementById('endP'),
+    endH: document.getElementById('endH'),
+    holeD: document.getElementById('holeD')
+};
+
+function initUI() {
+    ['slots', 'totalW', 'baseT', 'railH', 'endGap', 'endP', 'endH', 'holeD'].forEach(key => {
+        ui[key].addEventListener('input', () => {
+            let label = document.getElementById(`val-${key}`);
+            if (label) {
+                let suffix = (key === 'slots') ? '' : " mm";
+                // Formatuje ładnie co do 1 miejsca po przecinku (np. 21.2)
+                let numValue = parseFloat(ui[key].value);
+                if (key !== 'slots') numValue = numValue.toFixed(1);
+                label.innerText = numValue + suffix;
+            }
+            updateModel();
+        });
+    });
+
+    ui.railProfile.addEventListener('change', updateModel);
+    document.getElementById('btn-export').addEventListener('click', exportSTL);
+}
+
+function init3D() {
+    const container = document.querySelector('.canvas-wrapper');
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x09090b);
+
+    camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+    camera.position.set(60, 60, 60);
+
+    renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('canvas'), antialias: true });
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+
+    // Światła uwydatniające strukturę
+    scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+    
+    const dirLight1 = new THREE.DirectionalLight(0x2dd4bf, 0.8);
+    dirLight1.position.set(100, 150, 50).normalize();
+    scene.add(dirLight1);
+    
+    const dirLight2 = new THREE.DirectionalLight(0xffffff, 0.5);
+    dirLight2.position.set(-100, 50, -100).normalize();
+    scene.add(dirLight2);
+
+    window.addEventListener('resize', () => {
+        camera.aspect = container.clientWidth / container.clientHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(container.clientWidth, container.clientHeight);
+    });
+
+    updateModel();
+    animate();
+}
+
+function createRoundedRect(shape, W, H, R) {
+    const w = W;
+    const h = H;
+    let r = R;
+    const x = -w/2, y = -h/2;
+    
+    if (r <= 0) {
+        shape.moveTo(x, y);
+        shape.lineTo(x + w, y);
+        shape.lineTo(x + w, y + h);
+        shape.lineTo(x, y + h);
+        shape.lineTo(x, y);
+        return;
+    }
+
+    shape.moveTo(x + r, y);
+    shape.lineTo(x + w - r, y);
+    shape.absarc(x + w - r, y + r, r, -Math.PI/2, 0, false);
+    shape.lineTo(x + w, y + h - r);
+    shape.absarc(x + w - r, y + h - r, r, 0, Math.PI/2, false);
+    shape.lineTo(x + r, y + h);
+    shape.absarc(x + r, y + h - r, r, Math.PI/2, Math.PI, false);
+    shape.lineTo(x, y + r);
+    shape.absarc(x + r, y + r, r, Math.PI, Math.PI*1.5, false);
+}
+
+function updateModel() {
+    if (railGroup) scene.remove(railGroup);
+    railGroup = new THREE.Group();
+    scene.add(railGroup);
+
+    // Pobranie wartości
+    const slots = parseInt(ui.slots.value);
+    const totalW = parseFloat(ui.totalW.value); // Całkowite odblokowanie bazy (np. 15.6mm)
+    const baseT = parseFloat(ui.baseT.value);
+    const railH = parseFloat(ui.railH.value);
+    const profile = ui.railProfile.value;
+    const endGap = parseFloat(ui.endGap.value);
+    const endP = parseFloat(ui.endP.value);
+    const endH = Math.max(baseT, parseFloat(ui.endH.value)); 
+    const holeD = parseFloat(ui.holeD.value);
+
+    // Standardowe wymiary szyny MIL-STD-1913
+    const topW = 21.2;
+    const botW = 15.6;
+    const toothL = 4.8;
+    const valleyL = 5.2;
+    const slotDepth = 3.0;
+    const angleH = 2.8; 
+
+    // Kalkulacja długości całkowitych
+    const railL = (railH > 0 && slots > 0) ? ((slots * toothL) + ((slots - 1) * valleyL)) : 0;
+    const totalL = railL + (2 * endGap) + (2 * endP);
+    const maxZ = Math.max(baseT + railH, endH);
+
+    // Telemetria (UI)
+    document.getElementById('info-l').innerText = totalL.toFixed(1) + " mm";
+    document.getElementById('info-w').innerText = totalW.toFixed(1) + " mm";
+    document.getElementById('info-h').innerText = maxZ.toFixed(1) + " mm";
+
+    const mat = new THREE.MeshStandardMaterial({ color: 0x2d3748, roughness: 0.6, metalness: 0.2 });
+    const R = 2.0; 
+    const extSettings = { bevelEnabled: false, curveSegments: 32 };
+
+    // --- 1. PŁYTA BAZOWA ---
+    const baseShape = new THREE.Shape();
+    createRoundedRect(baseShape, totalW, totalL, R);
+
+    // Wycinanie otworów przelotowych
+    if (holeD > 0 && endP > 0) {
+        const holeR = holeD / 2;
+        const dist = (railL / 2) + endGap + (endP / 2); 
+        
+        const hole1 = new THREE.Path();
+        hole1.absarc(0, -dist, holeR, 0, Math.PI * 2, false);
+        baseShape.holes.push(hole1);
+
+        const hole2 = new THREE.Path();
+        hole2.absarc(0, dist, holeR, 0, Math.PI * 2, false);
+        baseShape.holes.push(hole2);
+    }
+
+    const baseGeo = new THREE.ExtrudeGeometry(baseShape, { ...extSettings, depth: baseT });
+    const baseMesh = new THREE.Mesh(baseGeo, mat);
+    railGroup.add(baseMesh);
+
+
+    // --- 2. DODATKOWA WYSOKOŚĆ KRAŃCÓW ---
+    if (endH > baseT && endP > 0) {
+        const extraH = endH - baseT;
+        const yDistFromCenter = totalL / 2;
+        
+        const end1Shape = new THREE.Shape();
+        const yBot = yDistFromCenter - endP;
+        
+        end1Shape.moveTo(totalW/2, yBot);
+        end1Shape.lineTo(totalW/2, yDistFromCenter - R);
+        end1Shape.absarc(totalW/2 - R, yDistFromCenter - R, R, 0, Math.PI/2, false);
+        end1Shape.lineTo(-totalW/2 + R, yDistFromCenter);
+        end1Shape.absarc(-totalW/2 + R, yDistFromCenter - R, R, Math.PI/2, Math.PI, false);
+        end1Shape.lineTo(-totalW/2, yBot);
+        end1Shape.lineTo(totalW/2, yBot);
+        
+        if (holeD > 0) {
+            const h = new THREE.Path();
+            h.absarc(0, yDistFromCenter - endP/2, holeD/2, 0, Math.PI*2, false);
+            end1Shape.holes.push(h);
+        }
+
+        const end1Geo = new THREE.ExtrudeGeometry(end1Shape, { ...extSettings, depth: extraH });
+        const end1Mesh = new THREE.Mesh(end1Geo, mat);
+        end1Mesh.position.z = baseT;
+        railGroup.add(end1Mesh);
+
+        const end2Shape = new THREE.Shape();
+        const yTop2 = -yDistFromCenter + endP;
+
+        end2Shape.moveTo(totalW/2, yTop2);
+        end2Shape.lineTo(-totalW/2, yTop2);
+        end2Shape.lineTo(-totalW/2, -yDistFromCenter + R);
+        end2Shape.absarc(-totalW/2 + R, -yDistFromCenter + R, R, Math.PI, Math.PI*1.5, false);
+        end2Shape.lineTo(totalW/2 - R, -yDistFromCenter);
+        end2Shape.absarc(totalW/2 - R, -yDistFromCenter + R, R, Math.PI*1.5, Math.PI*2, false);
+        end2Shape.lineTo(totalW/2, yTop2);
+
+        if (holeD > 0) {
+            const h2 = new THREE.Path();
+            h2.absarc(0, -yDistFromCenter + endP/2, holeD/2, 0, Math.PI*2, false);
+            end2Shape.holes.push(h2);
+        }
+
+        const end2Geo = new THREE.ExtrudeGeometry(end2Shape, { ...extSettings, depth: extraH });
+        const end2Mesh = new THREE.Mesh(end2Geo, mat);
+        end2Mesh.position.z = baseT;
+        railGroup.add(end2Mesh);
+    }
+
+
+    // --- 3. PROFIL SZYNY (Rdzeń + Zęby/Szczeliny) ---
+    if (railH > 0 && slots > 0) {
+        
+        // Zależnie od wybranego profilu decydujemy jak zbudować podstawę szyny
+        const bw = (profile === 'rect' || profile === 'inv_trapez') ? topW : botW; 
+        
+        // --- Rysowanie Zęba ---
+        const toothShape = new THREE.Shape();
+        toothShape.moveTo(-bw/2, 0);
+        toothShape.lineTo(bw/2, 0);
+        
+        if (profile === 'trapez') {
+            const angH = Math.min(angleH, railH); 
+            toothShape.lineTo(botW/2, railH - angH);
+            toothShape.lineTo(topW/2, railH);
+            toothShape.lineTo(-topW/2, railH);
+            toothShape.lineTo(-botW/2, railH - angH);
+        } else if (profile === 'inv_trapez') {
+            const angH = Math.min(angleH, railH); 
+            toothShape.lineTo(topW/2, railH - angH);
+            toothShape.lineTo(botW/2, railH); // Góra jest wąska
+            toothShape.lineTo(-botW/2, railH);
+            toothShape.lineTo(-topW/2, railH - angH); // Lewa strona z wcięcia wraca na dół
+        } else {
+            // Blok Prostokątny
+            toothShape.lineTo(bw/2, railH);
+            toothShape.lineTo(-bw/2, railH);
+        }
+        toothShape.lineTo(-bw/2, 0);
+
+
+        // --- Rysowanie Szczeliny (Valley) ---
+        const valleyHeight = Math.max(0, railH - slotDepth);
+        const valleyShape = new THREE.Shape();
+        
+        if (valleyHeight > 0) {
+            valleyShape.moveTo(-bw/2, 0);
+            valleyShape.lineTo(bw/2, 0);
+            
+            if (profile === 'trapez') {
+                const angH = Math.min(angleH, railH);
+                let valW = botW;
+                
+                if (valleyHeight > railH - angH && angH > 0) {
+                    const ratio = (valleyHeight - (railH - angH)) / angH;
+                    valW = botW + (topW - botW) * ratio;
+                }
+                
+                valleyShape.lineTo(botW/2, Math.min(valleyHeight, railH - angH));
+                if (valleyHeight > railH - angH) valleyShape.lineTo(valW/2, valleyHeight);
+                valleyShape.lineTo(-valW/2, valleyHeight);
+                if (valleyHeight > railH - angH) valleyShape.lineTo(-botW/2, Math.min(valleyHeight, railH - angH));
+                
+            } else if (profile === 'inv_trapez') {
+                const angH = Math.min(angleH, railH);
+                let valW = topW;
+                
+                if (valleyHeight > railH - angH && angH > 0) {
+                    const ratio = (valleyHeight - (railH - angH)) / angH;
+                    valW = topW - (topW - botW) * ratio; // Zwężanie do góry
+                }
+                
+                valleyShape.lineTo(topW/2, Math.min(valleyHeight, railH - angH));
+                if (valleyHeight > railH - angH) valleyShape.lineTo(valW/2, valleyHeight);
+                valleyShape.lineTo(-valW/2, valleyHeight);
+                if (valleyHeight > railH - angH) valleyShape.lineTo(-topW/2, Math.min(valleyHeight, railH - angH));
+                
+            } else {
+                valleyShape.lineTo(bw/2, valleyHeight);
+                valleyShape.lineTo(-bw/2, valleyHeight);
+            }
+            valleyShape.lineTo(-bw/2, 0);
+        }
+
+        const toothGeo = new THREE.ExtrudeGeometry(toothShape, { ...extSettings, depth: toothL });
+        const valleyGeo = new THREE.ExtrudeGeometry(valleyShape, { ...extSettings, depth: valleyL });
+
+        // Układanie rzędu zębów
+        let currentY = railL / 2;
+        for (let i = 0; i < slots; i++) {
+            
+            const tMesh = new THREE.Mesh(toothGeo, mat);
+            tMesh.rotation.x = Math.PI / 2; 
+            tMesh.position.set(0, currentY, baseT);
+            railGroup.add(tMesh);
+            currentY -= toothL;
+
+            if (i < slots - 1) {
+                if (valleyHeight > 0) {
+                    const vMesh = new THREE.Mesh(valleyGeo, mat);
+                    vMesh.rotation.x = Math.PI / 2;
+                    vMesh.position.set(0, currentY, baseT);
+                    railGroup.add(vMesh);
+                }
+                currentY -= valleyL;
+            }
+        }
+    }
+
+    // Rotacja na ekran
+    railGroup.rotateX(-Math.PI / 2); 
+}
+
+function animate() {
+    requestAnimationFrame(animate);
+    controls.update();
+    renderer.render(scene, camera);
+}
+
+function exportSTL() {
+    if (!railGroup) return;
+    const exporter = new THREE.STLExporter();
+    
+    railGroup.rotateX(Math.PI / 2);
+    const stlString = exporter.parse(railGroup); 
+    railGroup.rotateX(-Math.PI / 2);
+
+    const blob = new Blob([stlString], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    
+    link.style.display = 'none';
+    link.href = url;
+    
+    const s = document.getElementById('slots').value;
+    link.download = `Szyna_Picatinny_${s}_szczebelkow.stl`;
+    
+    document.body.appendChild(link);
+    link.click();
+    
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+}
+
+window.onload = () => {
+    initUI();
+    init3D();
+};
+</script>
+</body>
+</html>
