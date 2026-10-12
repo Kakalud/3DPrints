@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kreator Płytek Konstrukcyjnych 3D</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; -webkit-tap-highlight-color: transparent; }
+        
+        /* Blokada przewijania głównego okna - naprawia skaczące płótno */
+        html, body { height: 100%; overflow: hidden; background: #0f172a; color: #f8fafc; }
+
+        header { background: #1e293b; padding: 14px 24px; border-bottom: 1px solid #334155; display: flex; align-items: center; justify-content: space-between; z-index: 10; flex-shrink: 0; }
+        header h1 { font-size: 1.15rem; color: #06b6d4; font-weight: 700; display: flex; align-items: center; gap: 10px; margin: 0; }
+
+        /* Twardy podział ekranu */
+        .app-layout { display: flex; flex-direction: column; height: calc(100vh - 53px); }
+        @media (min-width: 900px) { .app-layout { flex-direction: row; } }
+
+        /* Lewy panel - niezależnie przewijany */
+        .sidebar { flex: 1; overflow-y: auto; padding: 20px 24px 100px 24px; background: #0f172a; }
+        @media (min-width: 900px) { .sidebar { flex: 0 0 480px; padding-bottom: 24px; border-right: 1px solid #334155; } }
+        .sidebar::-webkit-scrollbar { width: 8px; }
+        .sidebar::-webkit-scrollbar-track { background: #0f172a; }
+        .sidebar::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+
+        /* Prawy panel 3D - ZAWSZE WIDOCZNY, zajmuje resztę miejsca */
+        .preview-area { flex: 0 0 40vh; background: #020617; display: flex; justify-content: center; align-items: center; padding: 16px; border-bottom: 1px solid #334155; }
+        @media (min-width: 900px) { .preview-area { flex: 1; height: 100%; border-bottom: none; padding: 32px; } }
+
+        .canvas-wrapper { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; }
+        canvas { background: #0b1120; border-radius: 14px; border: 1px solid #1e293b; box-shadow: 0 12px 32px rgba(0,0,0,0.6); width: 100% !important; height: 100% !important; object-fit: contain; outline: none; }
+
+        .section-title { font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; margin: 24px 0 10px 4px; }
+        .section-title:first-child { margin-top: 0; }
+
+        .card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 16px; margin-bottom: 12px; }
+        .card-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 0.9rem; }
+        
+        .val { color: #06b6d4; font-weight: 700; font-family: monospace; background: rgba(6, 182, 212, 0.1); padding: 2px 8px; border-radius: 6px; font-size: 0.88rem; }
+        .val-sm { font-size: 0.75rem; padding: 2px 6px; }
+
+        input[type="range"] { width: 100%; height: 6px; background: #334155; border-radius: 4px; accent-color: #06b6d4; cursor: pointer; outline: none; margin-bottom: 12px; }
+        select { width: 100%; background: #0f172a; color: #f8fafc; border: 1px solid #475569; padding: 8px; border-radius: 6px; outline: none; font-size: 0.85rem; cursor: pointer; margin-bottom: 12px; }
+        select:focus { border-color: #06b6d4; }
+
+        .btn-add { width: 100%; padding: 12px; background: rgba(6, 182, 212, 0.1); color: #06b6d4; border: 1px dashed #06b6d4; border-radius: 8px; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .btn-add:hover { background: rgba(6, 182, 212, 0.2); }
+
+        .hole-group { border-left: 4px solid #06b6d4; position: relative; padding-bottom: 4px; }
+        .btn-remove { position: absolute; top: 12px; right: 12px; background: rgba(239, 68, 68, 0.1); color: #ef4444; border: none; border-radius: 6px; padding: 4px 8px; font-size: 0.75rem; font-weight: bold; cursor: pointer; }
+        .btn-remove:hover { background: #ef4444; color: #fff; }
+
+        .action-bar { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(30, 41, 59, 0.95); backdrop-filter: blur(8px); padding: 16px; border-top: 1px solid #334155; z-index: 100; }
+        @media (min-width: 900px) { .action-bar { position: static; background: transparent; border-top: none; padding: 16px 0 0 0; margin-top: auto; backdrop-filter: none; } }
+
+        button.export-btn { width: 100%; padding: 16px; background: #06b6d4; color: #0f172a; border: none; border-radius: 10px; font-weight: 700; font-size: 0.95rem; cursor: pointer; box-shadow: 0 4px 16px rgba(6, 182, 212, 0.25); transition: background 0.2s, transform 0.1s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        button.export-btn:hover { background: #0891b2; }
+        button.export-btn:active { transform: scale(0.98); }
+        
+        .hint-text { font-size: 0.75rem; color: #64748b; margin-top: -8px; margin-bottom: 12px; display: block; line-height: 1.4; }
+        
+        .telemetry { background: rgba(6, 182, 212, 0.05); border: 1px solid #06b6d4; border-radius: 8px; padding: 12px; margin-bottom: 20px; display: flex; justify-content: space-between; }
+        .telemetry-item { display: flex; flex-direction: column; align-items: center; }
+        .telemetry-label { font-size: 0.7rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px; }
+        .telemetry-value { font-size: 1.1rem; color: #06b6d4; font-weight: 700; font-family: monospace; }
+        
+        .warning-box { background: rgba(245, 158, 11, 0.1); border: 1px solid #f59e0b; color: #fcd34d; font-size: 0.75rem; padding: 10px; border-radius: 8px; margin-bottom: 16px; line-height: 1.4; }
+    </style>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/STLExporter.js"></script>
+</head>
+<body>
+
+    <header>
+        <h1>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><circle cx="15.5" cy="8.5" r="1.5"></circle><circle cx="8.5" cy="15.5" r="1.5"></circle><circle cx="15.5" cy="15.5" r="1.5"></circle></svg>
+            Kreator Płytek Konstrukcyjnych
+        </h1>
+    </header>
+
+    <div class="app-layout">
+        
+        <!-- Podgląd w HTML przeniesiony na górę dla responsywności mobilnej (flex-order) -->
+        <div class="preview-area">
+            <div class="canvas-wrapper">
+                <canvas id="canvas"></canvas>
+            </div>
+        </div>
+
+        <div class="sidebar">
+            <div class="telemetry">
+                <div class="telemetry-item">
+                    <span class="telemetry-label">Szerokość (X)</span>
+                    <span class="telemetry-value" id="info-w">0.0 mm</span>
+                </div>
+                <div class="telemetry-item">
+                    <span class="telemetry-label">Długość (Y)</span>
+                    <span class="telemetry-value" id="info-l">0.0 mm</span>
+                </div>
+                <div class="telemetry-item">
+                    <span class="telemetry-label">Grubość (Z)</span>
+                    <span class="telemetry-value" id="info-h">0.0 mm</span>
+                </div>
+            </div>
+            
+            <div class="warning-box">
+                <strong>Ważne:</strong> Otwory nie powinny na siebie nachodzić. Zbyt duża faza krawędzi (Bevel) na stykających się otworach może wygenerować artefakty geometrii.
+            </div>
+
+            <div class="section-title">Parametry Płytki (Bazy)</div>
+            <div class="card">
+                <div class="card-row"><span>Szerokość (X)</span><span id="val-pW" class="val">100.0 mm</span></div>
+                <input type="range" id="param-pW" min="10" max="500" step="1" value="100">
+
+                <div class="card-row"><span>Długość (Y)</span><span id="val-pL" class="val">150.0 mm</span></div>
+                <input type="range" id="param-pL" min="10" max="500" step="1" value="150">
+
+                <div class="card-row"><span>Grubość materiału (Z)</span><span id="val-pT" class="val">5.0 mm</span></div>
+                <input type="range" id="param-pT" min="1" max="50" step="0.5" value="5.0">
+
+                <div class="card-row" style="margin-top: 10px;"><span>Zaokrąglenie rogów (Promień)</span><span id="val-pRad" class="val">10.0 mm</span></div>
+                <input type="range" id="param-pRad" min="0" max="100" step="1" value="10">
+
+                <div class="card-row" style="margin-top: 10px;"><span>Faza krawędzi 3D (Bevel)</span><span id="val-pBev" class="val">1.0 mm</span></div>
+                <input type="range" id="param-pBev" min="0" max="10" step="0.2" value="1.0">
+            </div>
+
+            <div class="section-title">Moduł Otworów (Z góry)</div>
+            <div id="holes-container">
+                <!-- Grupy otworów generowane z JS -->
+            </div>
+            
+            <button class="btn-add" onclick="addHoleGroup()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                Dodaj Grupę Otworów
+            </button>
+
+            <div class="action-bar">
+                <button class="export-btn" onclick="exportSTL()">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    Pobierz plik STL
+                </button>
+            </div>
+        </div>
+    </div>
+
+<script>
+let scene, camera, renderer, controls, mainGroup;
+
+const plate = {
+    w: document.getElementById('param-pW'),
+    l: document.getElementById('param-pL'),
+    t: document.getElementById('param-pT'),
+    rad: document.getElementById('param-pRad'),
+    bev: document.getElementById('param-pBev'),
+};
+
+let holeGroupIdCounter = 0;
+let holeGroups = [];
+
+function enforcePlateLimits() {
+    let w = parseFloat(plate.w.value);
+    let l = parseFloat(plate.l.value);
+    let t = parseFloat(plate.t.value);
+    
+    let maxRad = Math.min(w, l) / 2;
+    plate.rad.max = maxRad;
+    if(parseFloat(plate.rad.value) > maxRad) plate.rad.value = maxRad;
+    
+    let maxBev = Math.min(t / 2, maxRad);
+    plate.bev.max = maxBev;
+    if(parseFloat(plate.bev.value) > maxBev) plate.bev.value = maxBev;
+    
+    document.getElementById(`val-pRad`).innerText = parseFloat(plate.rad.value).toFixed(1) + " mm";
+    document.getElementById(`val-pBev`).innerText = parseFloat(plate.bev.value).toFixed(1) + " mm";
+}
+
+function initUI() {
+    Object.keys(plate).forEach(key => {
+        plate[key].addEventListener('input', () => {
+            enforcePlateLimits();
+            document.getElementById(`val-p${key.charAt(0).toUpperCase() + key.slice(1)}`).innerText = parseFloat(plate[key].value).toFixed(1) + " mm";
+            renderHolesUI(); 
+            updateModel();
+        });
+    });
+
+    enforcePlateLimits();
+    addHoleGroup('corners'); 
+}
+
+function addHoleGroup(defaultPattern = 'single') {
+    let t = parseFloat(plate.t.value);
+    holeGroups.push({
+        id: holeGroupIdCounter++,
+        shape: 'round', 
+        d: 8.0,         
+        w: 10.0, h: 20.0,
+        depth: t,       
+        pattern: defaultPattern,
+        posX: 0, posY: 0, 
+        margin: 15.0,     
+        gridX: 3, gridY: 2, spaceX: 20, spaceY: 20
+    });
+    renderHolesUI();
+    updateModel();
+}
+
+function removeHoleGroup(id) {
+    holeGroups = holeGroups.filter(hg => hg.id !== id);
+    renderHolesUI();
+    updateModel();
+}
+
+function updateHoleParam(id, param, value) {
+    const group = holeGroups.find(hg => hg.id === id);
+    if (group) {
+        if (param === 'shape' || param === 'pattern') group[param] = value;
+        else group[param] = parseFloat(value);
+        
+        if (param === 'pattern' || param === 'shape') {
+            renderHolesUI(); 
+        } else {
+            if (param === 'depth') {
+                let currentT = parseFloat(plate.t.value);
+                let s = document.getElementById(`val-depth-${id}`);
+                if (group.depth >= currentT) {
+                    s.innerText = 'NA WYLOT';
+                    s.style.color = '#ef4444';
+                    s.style.borderColor = 'currentColor';
+                } else {
+                    s.innerText = group.depth.toFixed(1) + ' mm';
+                    s.style.color = '#f59e0b';
+                    s.style.borderColor = 'currentColor';
+                }
+            } else {
+                let s = document.getElementById(`val-${param}-${id}`);
+                if(s) s.innerText = group[param].toFixed(1) + (param.includes('grid') ? '' : ' mm');
+            }
+        }
+        updateModel();
+    }
+}
+
+function renderHolesUI() {
+    const container = document.getElementById('holes-container');
+    container.innerHTML = '';
+    let currentT = parseFloat(plate.t.value);
+
+    holeGroups.forEach((hg, index) => {
+        if (hg.depth > currentT) hg.depth = currentT; 
+
+        let html = `
+        <div class="card hole-group">
+            <button class="btn-remove" onclick="removeHoleGroup(${hg.id})">Usuń</button>
+            <div style="font-weight: bold; color: #06b6d4; margin-bottom: 12px;">Grupa Otworów #${index + 1}</div>
+            
+            <div class="card-row"><span>Kształt otworu</span></div>
+            <select onchange="updateHoleParam(${hg.id}, 'shape', this.value)">
+                <option value="round" ${hg.shape === 'round' ? 'selected' : ''}>Okrągły</option>
+                <option value="rect" ${hg.shape === 'rect' ? 'selected' : ''}>Prostokątny</option>
+            </select>
+        `;
+
+        if (hg.shape === 'round') {
+            html += `
+            <div class="card-row"><span>Średnica otworu</span><span id="val-d-${hg.id}" class="val val-sm">${hg.d.toFixed(1)} mm</span></div>
+            <input type="range" min="1" max="100" step="0.5" value="${hg.d}" oninput="updateHoleParam(${hg.id}, 'd', this.value)">
+            `;
+        } else {
+            html += `
+            <div class="card-row"><span>Szerokość (X)</span><span id="val-w-${hg.id}" class="val val-sm">${hg.w.toFixed(1)} mm</span></div>
+            <input type="range" min="1" max="200" step="1" value="${hg.w}" oninput="updateHoleParam(${hg.id}, 'w', this.value)">
+            
+            <div class="card-row"><span>Długość (Y)</span><span id="val-h-${hg.id}" class="val val-sm">${hg.h.toFixed(1)} mm</span></div>
+            <input type="range" min="1" max="200" step="1" value="${hg.h}" oninput="updateHoleParam(${hg.id}, 'h', this.value)">
+            `;
+        }
+
+        let isThrough = hg.depth >= currentT;
+        let depthColor = isThrough ? '#ef4444' : '#f59e0b';
+        let depthStr = isThrough ? "NA WYLOT" : hg.depth.toFixed(1) + " mm";
+        
+        html += `
+            <div class="card-row" style="margin-top:8px;">
+                <span style="color:#06b6d4">Głębokość wiercenia</span>
+                <span id="val-depth-${hg.id}" class="val val-sm" style="background: rgba(0,0,0,0.2); color: ${depthColor}; border: 1px solid currentColor;">${depthStr}</span>
+            </div>
+            <input type="range" min="0.5" max="${currentT}" step="0.5" value="${hg.depth}" oninput="updateHoleParam(${hg.id}, 'depth', this.value)">
+        `;
+
+        html += `
+            <div class="card-row" style="margin-top:16px;"><span>Rozmieszczenie</span></div>
+            <select onchange="updateHoleParam(${hg.id}, 'pattern', this.value)">
+                <option value="single" ${hg.pattern === 'single' ? 'selected' : ''}>Pojedynczy (Środek / Offset)</option>
+                <option value="corners" ${hg.pattern === 'corners' ? 'selected' : ''}>4 Narożniki (Symetrycznie)</option>
+                <option value="grid" ${hg.pattern === 'grid' ? 'selected' : ''}>Matryca / Siatka (Wiele)</option>
+            </select>
+        `;
+
+        if (hg.pattern === 'single' || hg.pattern === 'grid') {
+            html += `
+            <div class="card-row"><span>Przesunięcie X od środka</span><span id="val-posX-${hg.id}" class="val val-sm">${hg.posX.toFixed(1)} mm</span></div>
+            <input type="range" min="-200" max="200" step="1" value="${hg.posX}" oninput="updateHoleParam(${hg.id}, 'posX', this.value)">
+            
+            <div class="card-row"><span>Przesunięcie Y od środka</span><span id="val-posY-${hg.id}" class="val val-sm">${hg.posY.toFixed(1)} mm</span></div>
+            <input type="range" min="-200" max="200" step="1" value="${hg.posY}" oninput="updateHoleParam(${hg.id}, 'posY', this.value)">
+            `;
+        }
+
+        if (hg.pattern === 'corners') {
+            html += `
+            <div class="card-row"><span>Margines od krawędzi płytki</span><span id="val-margin-${hg.id}" class="val val-sm">${hg.margin.toFixed(1)} mm</span></div>
+            <input type="range" min="0" max="100" step="1" value="${hg.margin}" oninput="updateHoleParam(${hg.id}, 'margin', this.value)">
+            `;
+        }
+
+        if (hg.pattern === 'grid') {
+            html += `
+            <div style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; margin-top: 8px;">
+                <div class="card-row"><span>Ilość kolumn (Oś X)</span><span id="val-gridX-${hg.id}" class="val val-sm">${hg.gridX}</span></div>
+                <input type="range" min="1" max="20" step="1" value="${hg.gridX}" oninput="updateHoleParam(${hg.id}, 'gridX', this.value)">
+                
+                <div class="card-row"><span>Ilość rzędów (Oś Y)</span><span id="val-gridY-${hg.id}" class="val val-sm">${hg.gridY}</span></div>
+                <input type="range" min="1" max="20" step="1" value="${hg.gridY}" oninput="updateHoleParam(${hg.id}, 'gridY', this.value)">
+                
+                <div class="card-row"><span>Odstęp w X (Skok)</span><span id="val-spaceX-${hg.id}" class="val val-sm">${hg.spaceX.toFixed(1)} mm</span></div>
+                <input type="range" min="1" max="100" step="1" value="${hg.spaceX}" oninput="updateHoleParam(${hg.id}, 'spaceX', this.value)">
+                
+                <div class="card-row"><span>Odstęp w Y (Skok)</span><span id="val-spaceY-${hg.id}" class="val val-sm">${hg.spaceY.toFixed(1)} mm</span></div>
+                <input type="range" min="1" max="100" step="1" value="${hg.spaceY}" oninput="updateHoleParam(${hg.id}, 'spaceY', this.value)">
+            </div>
+            `;
+        }
+
+        html += `</div>`;
+        container.innerHTML += html;
+    });
+}
+
+
+function init3D() {
+    const container = document.querySelector('.canvas-wrapper');
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x020617);
+
+    camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 2000);
+    camera.position.set(100, -150, 150); 
+
+    renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('canvas'), antialias: true });
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+
+    scene.add(new THREE.AmbientLight(0xffffff, 0.4));
+    
+    const dirLight1 = new THREE.DirectionalLight(0x06b6d4, 0.7);
+    dirLight1.position.set(200, 200, 300).normalize();
+    scene.add(dirLight1);
+    
+    const dirLight2 = new THREE.DirectionalLight(0xffffff, 0.6);
+    dirLight2.position.set(-200, -200, 100).normalize();
+    scene.add(dirLight2);
+
+    window.addEventListener('resize', () => {
+        camera.aspect = container.clientWidth / container.clientHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(container.clientWidth, container.clientHeight);
+    });
+
+    updateModel();
+    animate();
+}
+
+function createRoundedRect(shape, width, length, radius) {
+    const x = -width/2, y = -length/2;
+    if (radius <= 0.01) {
+        shape.moveTo(x, y);
+        shape.lineTo(x + width, y);
+        shape.lineTo(x + width, y + length);
+        shape.lineTo(x, y + length);
+        shape.lineTo(x, y);
+    } else {
+        shape.moveTo(x + radius, y);
+        shape.lineTo(x + width - radius, y);
+        shape.quadraticCurveTo(x + width, y, x + width, y + radius);
+        shape.lineTo(x + width, y + length - radius);
+        shape.quadraticCurveTo(x + width, y + length, x + width - radius, y + length);
+        shape.lineTo(x + radius, y + length);
+        shape.quadraticCurveTo(x, y + length, x, y + length - radius);
+        shape.lineTo(x, y + radius);
+        shape.quadraticCurveTo(x, y, x + radius, y);
+    }
+}
+
+function updateModel() {
+    if (mainGroup) scene.remove(mainGroup);
+    mainGroup = new THREE.Group();
+    scene.add(mainGroup);
+
+    const W = parseFloat(plate.w.value);
+    const L = parseFloat(plate.l.value);
+    const T = parseFloat(plate.t.value);
+    const Rad = parseFloat(plate.rad.value);
+    const Bev = parseFloat(plate.bev.value);
+
+    document.getElementById('info-w').innerText = W.toFixed(1) + " mm";
+    document.getElementById('info-l').innerText = L.toFixed(1) + " mm";
+    document.getElementById('info-h').innerText = T.toFixed(1) + " mm";
+
+    const matBase = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.5, metalness: 0.2 });
+    
+    // Specjalny offset poligonów, aby dno ślepych kieszeni nie migotało w podglądzie (Z-fighting fix)
+    const matPlug = new THREE.MeshStandardMaterial({ 
+        color: 0x334155, roughness: 0.5, metalness: 0.2,
+        polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1
+    });
+    
+    const baseShape = new THREE.Shape();
+    createRoundedRect(baseShape, W, L, Rad);
+
+    const plugsGroup = new THREE.Group();
+
+    holeGroups.forEach(hg => {
+        let coords = [];
+        if (hg.pattern === 'single') {
+            coords.push({x: hg.posX, y: hg.posY});
+        } else if (hg.pattern === 'corners') {
+            let cx = W/2 - hg.margin;
+            let cy = L/2 - hg.margin;
+            if (cx < 0) cx = 0; if (cy < 0) cy = 0;
+            coords.push({x: cx, y: cy}, {x: -cx, y: cy}, {x: cx, y: -cy}, {x: -cx, y: -cy});
+        } else if (hg.pattern === 'grid') {
+            let startX = hg.posX - ((hg.gridX - 1) * hg.spaceX) / 2;
+            let startY = hg.posY - ((hg.gridY - 1) * hg.spaceY) / 2;
+            for(let i=0; i < hg.gridX; i++) {
+                for(let j=0; j < hg.gridY; j++) {
+                    coords.push({x: startX + i*hg.spaceX, y: startY + j*hg.spaceY});
+                }
+            }
+        }
+
+        if (hg.depth <= 0.1) return;
+
+        coords.forEach(pos => {
+            const holePath = new THREE.Path();
+            
+            if (hg.shape === 'round') {
+                holePath.absarc(pos.x, pos.y, hg.d / 2, 0, Math.PI * 2, true); 
+            } else {
+                const hw = hg.w / 2;
+                const hh = hg.h / 2;
+                // Poprawiony Winding Order (Clockwise) dla wycinania okien (otworów)
+                holePath.moveTo(pos.x - hw, pos.y + hh); // Top Left
+                holePath.lineTo(pos.x + hw, pos.y + hh); // Top Right
+                holePath.lineTo(pos.x + hw, pos.y - hh); // Bottom Right
+                holePath.lineTo(pos.x - hw, pos.y - hh); // Bottom Left
+                holePath.lineTo(pos.x - hw, pos.y + hh); // Close
+            }
+            baseShape.holes.push(holePath);
+
+            // Zatyczki dla otworów nie na wylot (ślepe kieszenie)
+            if (hg.depth < T - 0.05) {
+                const plugShape = new THREE.Shape();
+                if (hg.shape === 'round') {
+                    plugShape.absarc(pos.x, pos.y, hg.d / 2, 0, Math.PI * 2, false);
+                } else {
+                    const hw = hg.w / 2;
+                    const hh = hg.h / 2;
+                    // Winding Order (Counter-Clockwise) dla bryły pełnej
+                    plugShape.moveTo(pos.x - hw, pos.y - hh); // Bottom Left
+                    plugShape.lineTo(pos.x + hw, pos.y - hh); // Bottom Right
+                    plugShape.lineTo(pos.x + hw, pos.y + hh); // Top Right
+                    plugShape.lineTo(pos.x - hw, pos.y + hh); // Top Left
+                    plugShape.lineTo(pos.x - hw, pos.y - hh); // Close
+                }
+                
+                const plugHeight = (T - hg.depth) + 0.1;
+                const plugGeo = new THREE.ExtrudeGeometry(plugShape, { depth: plugHeight, bevelEnabled: false, curveSegments: 32 });
+                const plugMesh = new THREE.Mesh(plugGeo, matPlug);
+                plugMesh.position.z = -0.05; // Opad delikatnie w dół dla złączenia modeli
+                plugsGroup.add(plugMesh);
+            }
+        });
+    });
+
+    const bevelOn = Bev > 0.01;
+    const actualDepth = bevelOn ? Math.max(0.1, T - Bev * 2) : T;
+    
+    try {
+        const extSettings = { 
+            depth: actualDepth, 
+            bevelEnabled: bevelOn, 
+            bevelSize: Bev, 
+            bevelThickness: Bev,
+            bevelSegments: 3,
+            curveSegments: 32
+        };
+
+        const baseGeo = new THREE.ExtrudeGeometry(baseShape, extSettings);
+        const baseMesh = new THREE.Mesh(baseGeo, matBase);
+        
+        // Kompensacja geometrii ThreeJS (Bevel rośnie na zewnątrz z obu stron)
+        if (bevelOn) baseMesh.position.z = Bev;
+
+        mainGroup.add(baseMesh);
+        mainGroup.add(plugsGroup);
+    } catch (e) {
+        console.warn("Błąd geometrii - prawdopodobnie nachodzące otwory.", e);
+    }
+}
+
+function animate() {
+    requestAnimationFrame(animate);
+    controls.update();
+    renderer.render(scene, camera);
+}
+
+function exportSTL() {
+    if (!mainGroup) return;
+    const exporter = new THREE.STLExporter();
+    const stlString = exporter.parse(mainGroup); 
+
+    const blob = new Blob([stlString], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    
+    link.style.display = 'none';
+    link.href = url;
+    
+    const w = parseFloat(plate.w.value);
+    const l = parseFloat(plate.l.value);
+    link.download = `Plytka_${w}x${l}mm_Otwory.stl`;
+    
+    document.body.appendChild(link);
+    link.click();
+    
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+}
+
+// Startujemy najpierw 3D, potem wstrzykujemy UI
+window.onload = () => {
+    init3D();
+    initUI();
+};
+</script>
+</body>
+</html>
